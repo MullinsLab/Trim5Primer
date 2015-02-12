@@ -5,6 +5,7 @@ from Bio                 import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from itertools           import izip, chain
 from textwrap            import dedent
+from math                import ceil
 
 __version__ = '1.0.0'
 
@@ -84,12 +85,15 @@ def packSeq(seq, until):
         packed = (packed << 4) | base[char]
     return packed
 
-def bitCount(bit_int):
+def mismatchCount(bit_int):
     count = 0
     while (bit_int):
         count += (bit_int & 1)
         bit_int >>= 1
-    return count
+    # Each single-base mismatch is two bits XOR'd, except for Ns which are all
+    # zeros and will only cause 1 bit flipped.  This produces 0.5 when
+    # dividing, which we round up.
+    return int(ceil(count / 2.0))
 
 def openMaybeGzip(file, mode):
     if mode not in ['r', 'w']:
@@ -137,7 +141,7 @@ class Trim5Primer:
                     if (readNum not in direction) or (len(seq) < len(primer)):
                         continue
                     packedSeq = packSeq(seq, len(primer))
-                    if bitCount(packedPrimer ^ packedSeq) <= self.mismatches:
+                    if mismatchCount(packedPrimer ^ packedSeq) <= self.mismatches:
                         clipOffset = max(clipOffset, len(primer))
                 self.output[readNum].write("@%s\n%s\n+\n%s\n" % (id, seq[clipOffset:], qual[clipOffset:]))
                 if clipOffset > 0:
