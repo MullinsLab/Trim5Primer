@@ -103,9 +103,18 @@ def openMaybeGzip(file, mode):
     else:
         return open(file, "rU" if mode == "r" else "w")
 
+def readPrimers(fasta):
+    primers = []
+    for primer in SeqIO.parse(open(fasta, "rU"), "fasta"):
+        direction = re.search('/([12])$', primer.id)
+        direction = [int(direction.group(1))] if direction else [1, 2]
+        primers.append(
+            (str(primer.seq), packSeq(str(primer.seq), -1), [d - 1 for d in direction]))
+    return primers
+
 class Trim5Primer:
     def __init__(self, **args):
-        self.readPrimers(args['fasta'])
+        self.primers    = readPrimers(args['fasta'])
         self.mismatches = args['mismatches']
 
         self.input  = [ openMaybeGzip(i, "r") for i in args['fastqIn']  ]
@@ -118,14 +127,6 @@ class Trim5Primer:
             'clipped': [0, 0],
         }
         self.reportEvery = args['reportEvery']
-
-    def readPrimers(self, fasta):
-        self.primers = []
-        for primer in SeqIO.parse(open(fasta, "rU"), "fasta"):
-            direction = re.search('/([12])$', primer.id).group(1)
-            direction = [int(direction)] if direction else [1, 2]
-            self.primers.append(
-                (primer.seq, packSeq(primer.seq, -1), [d - 1 for d in direction]))
 
     def run(self):
         for reads in izip(self.r1, self.r2):
