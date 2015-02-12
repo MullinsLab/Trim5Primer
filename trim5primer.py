@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys, gzip, re, argparse
 
+from gzip                import GzipFile
 from Bio                 import SeqIO
 from Bio.SeqIO.QualityIO import FastqGeneralIterator
 from itertools           import izip, chain
@@ -96,12 +97,10 @@ def mismatchCount(bit_int):
     return int(ceil(count / 2.0))
 
 def openMaybeGzip(file, mode):
-    if mode not in ['r', 'w']:
-        raise ValueError("openMaybeGzip mode must be 'r' or 'w'")
+    f = open(file, mode)
     if re.search('\.gz$', file):
-        return gzip.open(file, "rb" if mode == "r" else "wb")
-    else:
-        return open(file, "rU" if mode == "r" else "w")
+        f = GzipFile(fileobj = f)
+    return f
 
 def readPrimers(fasta):
     primers = []
